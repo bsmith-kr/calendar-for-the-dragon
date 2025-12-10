@@ -423,8 +423,8 @@ void drawContent()
     log_i("Drawing content...");
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
-    // Layout: Calendar on left (2/3 width), Memo on right (1/3 width)
-    int calendar_width = (DISPLAY_WIDTH * 2) / 3;
+    // Layout: Calendar on left, Memo on right
+    int calendar_width = 540;
     int memo_width = DISPLAY_WIDTH - calendar_width;
 
     // Draw divider line

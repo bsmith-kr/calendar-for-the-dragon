@@ -353,8 +353,8 @@
                 <h3>💡 Tips</h3>
                 <ul>
                     <li>Full display is 960×540 pixels (16 grayscale levels)</li>
-                    <li>Calendar area: 640×540 pixels (left 2/3)</li>
-                    <li>Memo area: 320×540 pixels (right 1/3)</li>
+                    <li>Calendar area: 540×540 pixels</li>
+                    <li>Memo area: 420×540 pixels</li>
                     <li>Upload images or draw text to create your design</li>
                     <li>Check the full preview before uploading</li>
                     <li>Device will sleep after 2 minutes - press button to wake</li>
@@ -364,8 +364,8 @@
     </div>
 
     <!-- Hidden canvases for rendering (not visible to user) -->
-    <canvas id="calendarCanvas" width="640" height="540" style="display: none;"></canvas>
-    <canvas id="memoCanvas" width="320" height="540" style="display: none;"></canvas>
+    <canvas id="calendarCanvas" width="540" height="540" style="display: none;"></canvas>
+    <canvas id="memoCanvas" width="420" height="540" style="display: none;"></canvas>
 
     <script>
         // Canvas setup
@@ -437,7 +437,7 @@
             const startDayOffset = firstDay; // Sunday start (0 = Sunday)
 
             const textColor = '#000000';
-            const gridColor = '#666666';
+            const gridColor = '#cccccc';
 
             // Draw month and year title
             calendarCtx.fillStyle = textColor;
@@ -447,7 +447,7 @@
 
             // Calendar grid settings
             const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const cellWidth = 80;
+            const cellWidth = 60;
             const cellHeight = 60;
             const startX = 50;
             const startY = 100;
@@ -483,7 +483,7 @@
             }
 
             // Fill in the dates
-            calendarCtx.font = 'bold 24px Arial';
+            calendarCtx.font = '24px Arial';
             calendarCtx.fillStyle = textColor;
             calendarCtx.textAlign = 'center';
 
@@ -570,18 +570,18 @@
             previewCtx.fillStyle = '#FFFFFF';
             previewCtx.fillRect(0, 0, 960, 540);
 
-            // Draw calendar on left (640 pixels wide)
+            // Draw calendar on left (540 pixels wide)
             previewCtx.drawImage(calendarCanvas, 0, 0);
 
-            // Draw memo on right (320 pixels wide, starting at x=640)
-            previewCtx.drawImage(memoCanvas, 640, 0);
+            // Draw memo on right (420 pixels wide, starting at x=540)
+            previewCtx.drawImage(memoCanvas, 540, 0);
 
             // Draw a subtle divider line between calendar and memo
             previewCtx.strokeStyle = '#CCCCCC';
             previewCtx.lineWidth = 2;
             previewCtx.beginPath();
-            previewCtx.moveTo(640, 0);
-            previewCtx.lineTo(640, 540);
+            previewCtx.moveTo(540, 0);
+            previewCtx.lineTo(540, 540);
             previewCtx.stroke();
         }
 

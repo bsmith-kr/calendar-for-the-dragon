@@ -9,8 +9,8 @@ An e-paper calendar and memo display system for the LilyGo-EPD47 (ESP32-based 96
 - **Captive Portal**: Auto-redirects to setup page when connected (no manual URL entry needed)
 - **Web-Based Configuration**: Beautiful responsive web interface for designing and uploading content
 - **Split Display Layout**:
-  - Calendar area (640×540 pixels) - 2/3 of display
-  - Memo area (320×540 pixels) - 1/3 of display
+  - Calendar area (540×540 pixels)
+  - Memo area (420×540 pixels)
 - **Image Support**: Upload custom calendar and memo images via phone browser
 - **Visual Editor**: Draw calendar grids, add text, and upload background images
 - **Deep Sleep**: Ultra-low power consumption when not in use
@@ -162,8 +162,8 @@ The device operates in multiple states:
 Images are stored in 4-bit grayscale format:
 - 2 pixels per byte
 - Values: 0-15 (0=black, 15=white)
-- Calendar: 640×540 = 172,800 bytes
-- Memo: 320×540 = 86,400 bytes
+- Calendar: 540×540
+- Memo: 420×540
 
 The web interface automatically converts any image format to this format.
 
