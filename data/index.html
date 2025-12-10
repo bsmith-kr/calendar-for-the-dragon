@@ -288,6 +288,20 @@
                 <p><strong>Status:</strong> <span id="deviceStatus">Connecting...</span></p>
             </div>
 
+            <!-- Background Image Section -->
+            <div class="section">
+                <h2>🖼️ Background Image (Optional)</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Full Screen Background (960 × 540)</label>
+                        <input type="file" id="backgroundImage" accept="image/*" onchange="applyBackground()">
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="clearBackground()">🗑️ Clear Background</button>
+                </div>
+            </div>
+
             <!-- Full Display Preview -->
             <div class="section">
                 <h2>📺 Display Preview (960 × 540)</h2>
@@ -308,10 +322,6 @@
                             <option value="next">Next Month</option>
                         </select>
                     </div>
-                    <div class="control-group">
-                        <label>Background Image (Optional)</label>
-                        <input type="file" id="calendarImage" accept="image/*">
-                    </div>
                 </div>
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="drawCalendar()">✏️ Generate Calendar</button>
@@ -326,10 +336,6 @@
                     <div class="control-group">
                         <label>Memo Title</label>
                         <input type="text" id="memoText" value="Today's Tasks" placeholder="Enter memo title">
-                    </div>
-                    <div class="control-group">
-                        <label>Background Image (Optional)</label>
-                        <input type="file" id="memoImage" accept="image/*">
                     </div>
                 </div>
                 <div class="btn-group">
@@ -353,10 +359,10 @@
                 <h3>💡 Tips</h3>
                 <ul>
                     <li>Full display is 960×540 pixels (16 grayscale levels)</li>
-                    <li>Calendar area: 540×540 pixels</li>
-                    <li>Memo area: 420×540 pixels</li>
-                    <li>Upload images or draw text to create your design</li>
-                    <li>Check the full preview before uploading</li>
+                    <li>Upload one background image (960×540) for the entire screen</li>
+                    <li>Calendar and memo will be drawn on top of the background</li>
+                    <li>Generate calendar to show the current or next month</li>
+                    <li>Check the full preview before uploading to device</li>
                     <li>Device will sleep after 2 minutes - press button to wake</li>
                 </ul>
             </div>
@@ -396,6 +402,41 @@
             }
         }
 
+        let backgroundImageData = null;
+
+        async function applyBackground() {
+            const imageInput = document.getElementById('backgroundImage');
+            if (imageInput.files.length > 0) {
+                const file = imageInput.files[0];
+                backgroundImageData = await loadImageFile(file);
+
+                // Redraw everything with new background
+                await drawCalendar();
+                await drawMemo();
+            }
+        }
+
+        function clearBackground() {
+            backgroundImageData = null;
+            document.getElementById('backgroundImage').value = '';
+
+            // Redraw everything without background
+            drawCalendar();
+            drawMemo();
+        }
+
+        function loadImageFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         function clearCalendar() {
             calendarCtx.fillStyle = '#ffffff';
             calendarCtx.fillRect(0, 0, calendarCanvas.width, calendarCanvas.height);
@@ -411,10 +452,12 @@
         async function drawCalendar() {
             clearCalendar();
 
-            // Draw background image if selected
-            const imageInput = document.getElementById('calendarImage');
-            if (imageInput.files.length > 0) {
-                await drawImageOnCanvas(imageInput.files[0], calendarCtx, calendarCanvas);
+            // Draw background image portion for calendar area (left 640px of full image)
+            if (backgroundImageData) {
+                calendarCtx.drawImage(backgroundImageData,
+                    0, 0, 640, 540,  // Source: left portion of image
+                    0, 0, 640, 540   // Destination: calendar canvas
+                );
             }
 
             // Get selected month (current or next)
@@ -507,15 +550,17 @@
         async function drawMemo() {
             clearMemo();
 
-            // Draw background image if selected
-            const imageInput = document.getElementById('memoImage');
-            if (imageInput.files.length > 0) {
-                await drawImageOnCanvas(imageInput.files[0], memoCtx, memoCanvas);
+            // Draw background image portion for memo area (right 320px of full image)
+            if (backgroundImageData) {
+                memoCtx.drawImage(backgroundImageData,
+                    640, 0, 320, 540,  // Source: right portion of image (starting at x=640)
+                    0, 0, 320, 540     // Destination: memo canvas
+                );
             }
 
             // Draw memo text
             const memoText = document.getElementById('memoText').value;
-            const textColor = '#808080';  // Always gray for grayscale
+            const textColor = '#000000';  // Always black for grayscale
 
             memoCtx.fillStyle = textColor;
             memoCtx.font = 'bold 24px Arial';
