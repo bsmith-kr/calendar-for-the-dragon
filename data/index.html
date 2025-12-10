@@ -387,11 +387,12 @@
         const previewCtx = previewCanvas.getContext('2d');
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             checkDeviceStatus();
             clearCalendar();
             clearMemo();
-            loadMemoSettings();  // Load saved memo settings from device
+            await loadMemoSettings();  // Load saved memo settings from device
+            await drawCalendar();  // Draw calendar automatically on load
             updatePreview();
         });
 
