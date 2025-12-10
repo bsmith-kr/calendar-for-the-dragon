@@ -16,7 +16,7 @@
 // Configuration
 #define AP_SSID "CalendarDragon"
 #define AP_PASSWORD ""  // Empty for open network, or set a password
-#define AP_TIMEOUT_MS 120000  // 2 minutes timeout for AP mode
+#define AP_TIMEOUT_MS 5*60*1000  // 5 minutes timeout for AP mode
 #define WAKEUP_BUTTON_PIN 39
 
 // File paths in SPIFFS
@@ -134,8 +134,11 @@ void setup()
 
             log_i("QR Data: %s", qrData.c_str());
 
+            // Create URL with http:// prefix
+            String url = "http://" + ip;
+
             // Draw WiFi QR code (includes text labels)
-            drawQRCode(qrData.c_str(), ip.c_str());
+            drawQRCode(qrData.c_str(), url.c_str());
 
             epd_poweroff();
 
@@ -380,50 +383,57 @@ void drawQRCode(const char* qrData, const char* displayUrl)
 {
     if (!framebuffer) return;
 
-    log_i("Drawing QR code for: %s", qrData);
+    log_i("Drawing dual QR codes");
 
-    // Create QR code (version 6 can hold ~120 chars for WiFi format)
-    QRCode qrcode;
-    uint8_t qrcodeBytes[qrcode_getBufferSize(6)];
-    int8_t result = qrcode_initText(&qrcode, qrcodeBytes, 6, ECC_LOW, qrData);
+    // QR code settings
+    int scale = 6;  // Each QR module is 6x6 pixels (smaller to fit two)
+    int qr_spacing = 180;  // Space between the two QR codes (3x to prevent overlap)
+    int top_margin = 60;
 
-    if (result != 0) {
+    // Create WiFi QR code
+    QRCode qrcode_wifi;
+    uint8_t qrcodeBytes_wifi[qrcode_getBufferSize(6)];
+    int8_t result1 = qrcode_initText(&qrcode_wifi, qrcodeBytes_wifi, 6, ECC_LOW, qrData);
+
+    // Create URL QR code
+    QRCode qrcode_url;
+    uint8_t qrcodeBytes_url[qrcode_getBufferSize(4)];
+    int8_t result2 = qrcode_initText(&qrcode_url, qrcodeBytes_url, 4, ECC_LOW, displayUrl);
+
+    if (result1 != 0 || result2 != 0) {
         log_e("QR code generation failed");
         return;
     }
 
-    int qr_size = qrcode.size;
-    int scale = 8;  // Each QR module is 8x8 pixels
-    int qr_pixel_size = qr_size * scale;
+    int qr_size_wifi = qrcode_wifi.size;
+    int qr_pixel_size_wifi = qr_size_wifi * scale;
 
-    // Random position to prevent burn-in (with margin)
-    int margin = 40;
-    int max_x_offset = DISPLAY_WIDTH - qr_pixel_size - margin * 2;
-    int max_y_offset = DISPLAY_HEIGHT - qr_pixel_size - margin * 2 - 150;  // Leave space for text at bottom
+    int qr_size_url = qrcode_url.size;
+    int qr_pixel_size_url = qr_size_url * scale;
 
-    // Seed random with current time (millis)
-    randomSeed(millis());
+    // Calculate positions (centered, side by side)
+    int total_width = qr_pixel_size_wifi + qr_spacing + qr_pixel_size_url;
+    int start_x = (DISPLAY_WIDTH - total_width) / 2;
 
-    int x_offset = margin + random(0, max_x_offset);
-    int y_offset = margin + random(0, max_y_offset);
+    int wifi_x = start_x;
+    int url_x = start_x + qr_pixel_size_wifi + qr_spacing;
+    int y_offset = top_margin;
 
-    log_i("QR code position: x=%d, y=%d (random burn-in prevention)", x_offset, y_offset);
+    log_i("QR codes position: WiFi x=%d, URL x=%d, y=%d", wifi_x, url_x, y_offset);
 
-    // Clear area for QR code (white background)
-    for (int py = y_offset - 20; py < y_offset + qr_pixel_size + 20; py++) {
-        for (int px = x_offset - 20; px < x_offset + qr_pixel_size + 20; px++) {
+    // Draw WiFi QR code
+    for (int py = y_offset - 20; py < y_offset + qr_pixel_size_wifi + 20; py++) {
+        for (int px = wifi_x - 20; px < wifi_x + qr_pixel_size_wifi + 20; px++) {
             epd_draw_pixel(px, py, 255, framebuffer);
         }
     }
 
-    // Draw QR code
-    for (int y = 0; y < qr_size; y++) {
-        for (int x = 0; x < qr_size; x++) {
-            if (qrcode_getModule(&qrcode, x, y)) {
-                // Draw a filled rectangle for each black module
+    for (int y = 0; y < qr_size_wifi; y++) {
+        for (int x = 0; x < qr_size_wifi; x++) {
+            if (qrcode_getModule(&qrcode_wifi, x, y)) {
                 for (int dy = 0; dy < scale; dy++) {
                     for (int dx = 0; dx < scale; dx++) {
-                        int px = x_offset + x * scale + dx;
+                        int px = wifi_x + x * scale + dx;
                         int py = y_offset + y * scale + dy;
                         epd_draw_pixel(px, py, 0, framebuffer);
                     }
@@ -432,22 +442,39 @@ void drawQRCode(const char* qrData, const char* displayUrl)
         }
     }
 
-    // Draw text instructions below QR code
-    int text_y = y_offset + qr_pixel_size + 40;
-    int text_x = x_offset;
+    // Draw URL QR code
+    for (int py = y_offset - 20; py < y_offset + qr_pixel_size_url + 20; py++) {
+        for (int px = url_x - 20; px < url_x + qr_pixel_size_url + 20; px++) {
+            epd_draw_pixel(px, py, 255, framebuffer);
+        }
+    }
 
-    // Title
-    drawText("Scan to Connect WiFi", text_x, text_y, &FiraSans);
+    for (int y = 0; y < qr_size_url; y++) {
+        for (int x = 0; x < qr_size_url; x++) {
+            if (qrcode_getModule(&qrcode_url, x, y)) {
+                for (int dy = 0; dy < scale; dy++) {
+                    for (int dx = 0; dx < scale; dx++) {
+                        int px = url_x + x * scale + dx;
+                        int py = y_offset + y * scale + dy;
+                        epd_draw_pixel(px, py, 0, framebuffer);
+                    }
+                }
+            }
+        }
+    }
 
-    // SSID
+    // Draw text labels below each QR code
+    int text_y = y_offset + max(qr_pixel_size_wifi, qr_pixel_size_url) + 30;
+
+    // WiFi QR label
+    drawText("WiFi Connect", wifi_x, text_y, &FiraSans);
     char ssid_text[64];
     snprintf(ssid_text, sizeof(ssid_text), "SSID: %s", AP_SSID);
-    drawText(ssid_text, text_x, text_y + 40, &FiraSans);
+    drawText(ssid_text, wifi_x, text_y + 35, &FiraSans);
 
-    // URL (for manual connection)
-    char url_text[128];
-    snprintf(url_text, sizeof(url_text), "Or: %s", displayUrl);
-    drawText(url_text, text_x, text_y + 80, &FiraSans);
+    // URL QR label
+    drawText("Web Interface", url_x, text_y, &FiraSans);
+    drawText(displayUrl, url_x, text_y + 35, &FiraSans);
 
     // Draw framebuffer to display
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
