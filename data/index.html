@@ -335,7 +335,11 @@
                 <div class="controls">
                     <div class="control-group">
                         <label>Memo Title</label>
-                        <input type="text" id="memoText" value="Today's Tasks" placeholder="Enter memo title">
+                        <input type="text" id="memoTitle" value="Memo" placeholder="Enter memo title">
+                    </div>
+                    <div class="control-group">
+                        <label>Memo Contents (Multi-line)</label>
+                        <textarea id="memoContents" rows="6" placeholder="Enter your memo contents here..." style="width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ddd; border-radius: 5px; font-family: Arial, sans-serif; resize: vertical;"></textarea>
                     </div>
                 </div>
                 <div class="btn-group">
@@ -387,6 +391,7 @@
             checkDeviceStatus();
             clearCalendar();
             clearMemo();
+            loadMemoSettings();  // Load saved memo settings from device
             updatePreview();
         });
 
@@ -496,7 +501,7 @@
             const startY = 100;
 
             // Draw weekday headers
-            calendarCtx.font = 'bold 20px Arial';
+            calendarCtx.font = '20px Arial';
             calendarCtx.fillStyle = textColor;
             weekdays.forEach((day, i) => {
                 calendarCtx.textAlign = 'center';
@@ -558,14 +563,14 @@
                 );
             }
 
-            // Draw memo text
-            const memoText = document.getElementById('memoText').value;
             const textColor = '#000000';  // Always black for grayscale
 
+            // Draw memo title
+            const memoTitle = document.getElementById('memoTitle').value;
             memoCtx.fillStyle = textColor;
             memoCtx.font = 'bold 24px Arial';
             memoCtx.textAlign = 'center';
-            memoCtx.fillText(memoText, memoCanvas.width / 2, 40);
+            memoCtx.fillText(memoTitle, memoCanvas.width / 2, 40);
 
             // Draw line under title
             memoCtx.strokeStyle = textColor;
@@ -575,7 +580,92 @@
             memoCtx.lineTo(memoCanvas.width - 20, 60);
             memoCtx.stroke();
 
+            // Draw memo contents (multi-line)
+            const memoContents = document.getElementById('memoContents').value;
+            const lines = memoContents.split('\n');
+
+            memoCtx.font = '22px Arial';
+            memoCtx.textAlign = 'left';
+            memoCtx.fillStyle = textColor;
+
+            let yPosition = 90;  // Start position below the line
+            const lineHeight = 28;  // Space between lines (increased for larger font)
+            const maxWidth = memoCanvas.width - 40;  // Leave 20px margin on each side
+
+            lines.forEach(line => {
+                if (yPosition < memoCanvas.height - 20) {  // Don't draw beyond canvas
+                    // Wrap long lines if needed
+                    const words = line.split(' ');
+                    let currentLine = '';
+
+                    words.forEach(word => {
+                        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                        const metrics = memoCtx.measureText(testLine);
+
+                        if (metrics.width > maxWidth && currentLine !== '') {
+                            // Draw current line and start new one
+                            memoCtx.fillText(currentLine, 20, yPosition);
+                            yPosition += lineHeight;
+                            currentLine = word;
+                        } else {
+                            currentLine = testLine;
+                        }
+                    });
+
+                    // Draw remaining text
+                    if (currentLine && yPosition < memoCanvas.height - 20) {
+                        memoCtx.fillText(currentLine, 20, yPosition);
+                        yPosition += lineHeight;
+                    }
+                }
+            });
+
+            // Save memo settings to device
+            saveMemoSettings();
+
             updatePreview();
+        }
+
+        async function saveMemoSettings() {
+            const memoTitle = document.getElementById('memoTitle').value;
+            const memoContents = document.getElementById('memoContents').value;
+
+            const data = {
+                title: memoTitle,
+                contents: memoContents
+            };
+
+            try {
+                const response = await fetch('/save-memo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    console.log('Failed to save memo settings');
+                }
+            } catch (error) {
+                console.log('Error saving memo settings:', error);
+            }
+        }
+
+        async function loadMemoSettings() {
+            try {
+                const response = await fetch('/load-memo');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('memoTitle').value = data.title || 'Memo';
+                    document.getElementById('memoContents').value = data.contents || '';
+
+                    // Redraw memo with loaded settings
+                    drawMemo();
+                }
+            } catch (error) {
+                console.log('Could not load memo settings:', error);
+            }
         }
 
         function drawImageOnCanvas(file, ctx, canvas) {

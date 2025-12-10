@@ -294,6 +294,43 @@ void initWebServer()
         request->send(200, "application/json", json);
     });
 
+    // Save memo settings endpoint
+    server.on("/save-memo", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0) {
+                // Start of upload - open file for writing
+                File file = SPIFFS.open("/memo-settings.json", FILE_WRITE);
+                if (file) {
+                    file.write(data, len);
+                    file.close();
+                    log_i("Memo settings saved (%d bytes)", len);
+                }
+            }
+
+            if (index + len == total) {
+                // Upload complete
+                request->send(200, "application/json", "{\"status\":\"saved\"}");
+            }
+        }
+    );
+
+    // Load memo settings endpoint
+    server.on("/load-memo", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (SPIFFS.exists("/memo-settings.json")) {
+            File file = SPIFFS.open("/memo-settings.json", FILE_READ);
+            if (file) {
+                String content = file.readString();
+                file.close();
+                request->send(200, "application/json", content);
+                log_i("Memo settings loaded");
+            } else {
+                request->send(200, "application/json", "{\"title\":\"Memo\",\"contents\":\"\"}");
+            }
+        } else {
+            request->send(200, "application/json", "{\"title\":\"Memo\",\"contents\":\"\"}");
+        }
+    });
+
     server.begin();
     log_i("Web server started");
 }
